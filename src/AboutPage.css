@@ -353,3 +353,28 @@
         padding-left: 1.25rem;
     }
 }
+
+@media (max-width: 64rem) {
+    .n-about-principles-grid {
+        grid-template-columns: minmax(0, 1fr);
+        min-width: 0;
+    }
+
+    .n-about-text p {
+        font-size: 1.125rem;
+    }
+
+    .n-about-doctor {
+        height: 28rem;
+    }
+}
+
+@media (max-width: 43.75rem) {
+    .n-about-text p {
+        font-size: 1rem;
+    }
+
+    .n-about-doctor {
+        height: 24rem;
+    }
+}

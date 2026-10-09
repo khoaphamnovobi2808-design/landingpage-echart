@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { getImage, workflowImages, getDesignIcon } from './media'
 import capabilityImage from './assets/capabilities.png'
+import patientAppImage from './assets/character.png'
 import './fonts.css'
 import './HomepageNew.css'
 import AboutPage from './AboutPage'
@@ -8,6 +9,7 @@ import DemoContact from './DemoContact'
 import FeaturesPage from './FeaturesPage'
 import DesignIcon from './components/DesignIcon'
 import ReasonsSection from './components/ReasonsSection'
+import ValueDetailOverlay from './components/ValueDetailOverlay'
 
 const sharedImages = { 'imgImage2.png': 'hero.png', 'imgImage13.png': 'feature-daily.png', 'imgImage22.png': 'feature-records.png', 'imgImage18.png': 'feature-connect.png', 'imgImage23.png': 'workflow.png', 'imgLogo.png': 'logo.png' }
 const asset = (name) => sharedImages[name] ? getImage(sharedImages[name]) : getDesignIcon(name)
@@ -23,6 +25,18 @@ const capabilities = [
   ['imgCalendarClock.svg', 'Quản lý lịch hẹn', 'Theo dõi lịch hẹn theo ngày, tuần hoặc tháng trên eChart.'],
   ['imgTestTubes.svg', 'Theo dõi kết quả lâm sàng', 'Theo dõi kết quả lâm sàng trong hồ sơ bệnh nhân.'],
   ['imgHandCoins.svg', 'Tài chính - hóa đơn', 'Quản lý tài chính và hóa đơn của phòng khám trên một nền tảng.'],
+]
+const carePrinciples = [
+  ['01', 'Tiếp cận ban đầu', 'First contact', 'Người bệnh có thể dễ dàng tiếp cận phòng khám khi có nhu cầu chăm sóc sức khỏe, được đánh giá và định hướng chăm sóc phù hợp.'],
+  ['02', 'Chăm sóc toàn diện', 'Comprehensiveness', 'Đáp ứng nhiều nhu cầu sức khỏe của người bệnh, từ phòng ngừa, khám, chẩn đoán, điều trị đến theo dõi và phục hồi'],
+  ['03', 'Điều phối chăm sóc', 'Coordination', 'Kết nối và phối hợp các dịch vụ y tế nhằm đảm bảo quá trình chăm sóc người bệnh được thống nhất.'],
+  ['04', 'Chăm sóc liên tục', 'Continuity', 'Duy trì mối quan hệ lâu dài giữa người bệnh và nhân viên y tế, xây dựng sự tin tưởng và chăm sóc xuyên suốt.'],
+]
+const patientNotifications = [
+  ['results', 'feature-tests.svg', 'Kết quả xét nghiệm', 'Đã có kết quả'],
+  ['appointment', 'feature-calendar.svg', 'Lịch hẹn khám', 'Thứ 5, 18/12 · 08:15'],
+  ['prescription', 'feature-file.svg', 'Đơn thuốc mới', 'Bác sĩ đã kê đơn'],
+  ['summary', 'imgClipboard.svg', 'Tóm tắt sau khám', 'Đã sẵn sàng xem'],
 ]
 const steps = [
   ['imgVector1.svg', 'Tiếp nhận bệnh nhân', [
@@ -54,6 +68,7 @@ export default function HomepageNew() {
   const [scrolled, setScrolled] = useState(false)
   const [headerHidden, setHeaderHidden] = useState(false)
   useEffect(() => {
+    const compact = window.matchMedia('(max-width: 56.25rem)')
     let previousY = Math.max(0, window.scrollY)
     let distance = 0
     let direction = 0
@@ -69,6 +84,11 @@ export default function HomepageNew() {
         direction = 0
         return
       }
+      if (compact.matches) {
+        setHeaderHidden(false)
+        setScrolled(currentY > 16)
+        return
+      }
       if (delta === 0) return
       const nextDirection = Math.sign(delta)
       distance = nextDirection === direction ? distance + Math.abs(delta) : Math.abs(delta)
@@ -80,14 +100,195 @@ export default function HomepageNew() {
         distance = 0
       }
     }
+    onScroll()
+    compact.addEventListener('change', onScroll)
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => {
+      compact.removeEventListener('change', onScroll)
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [])
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuClosing, setMenuClosing] = useState(false)
+  const headerRef = useRef(null)
+  const menuButtonRef = useRef(null)
+
+  useLayoutEffect(() => {
+    if (!menuOpen || !headerRef.current) return
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const finishClosing = () => {
+      if (menuClosing) {
+        setMenuOpen(false)
+        setMenuClosing(false)
+      }
+    }
+    if (preference.matches) {
+      finishClosing()
+      return
+    }
+    const panel = headerRef.current.querySelector('.n-nav')
+    const animation = panel.animate(menuClosing ? [
+      { opacity: 1 },
+      { opacity: 0 },
+    ] : [
+      { opacity: 0 },
+      { opacity: 1 },
+    ], {
+      duration: menuClosing ? 420 : 600,
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      fill: 'both',
+    })
+    const itemAnimations = [...panel.children].map((item) => item.animate(menuClosing ? [
+      { translate: '0 0' },
+      { translate: '0 -0.75rem' },
+    ] : [
+      { translate: '0 -0.75rem' },
+      { translate: '0 0' },
+    ], {
+      duration: menuClosing ? 420 : 600,
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      fill: 'both',
+    }))
+    animation.onfinish = finishClosing
+    const finishForReducedMotion = () => {
+      if (preference.matches) {
+        itemAnimations.forEach((item) => item.finish())
+        animation.finish()
+      }
+    }
+    preference.addEventListener('change', finishForReducedMotion)
+    return () => {
+      animation.onfinish = null
+      animation.cancel()
+      itemAnimations.forEach((item) => item.cancel())
+      preference.removeEventListener('change', finishForReducedMotion)
+    }
+  }, [menuOpen, menuClosing])
+
+  useEffect(() => {
+    const compact = window.matchMedia('(max-width: 56.25rem)')
+    const closeOnDesktop = () => {
+      if (!compact.matches) {
+        setMenuOpen(false)
+        setMenuClosing(false)
+      }
+    }
+    compact.addEventListener('change', closeOnDesktop)
+    return () => compact.removeEventListener('change', closeOnDesktop)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!menuOpen) return
+    const menuButton = menuButtonRef.current
+    const bodyOverflow = document.body.style.overflow
+    const rootOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    function handleMenuKey(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setMenuClosing(true)
+      }
+      if (event.key !== 'Tab') return
+      const controls = [...headerRef.current.querySelectorAll('a[href], button')]
+        .filter((element) => element.getClientRects().length && !element.disabled)
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', handleMenuKey)
+    return () => {
+      document.body.style.overflow = bodyOverflow
+      document.documentElement.style.overflow = rootOverflow
+      document.removeEventListener('keydown', handleMenuKey)
+      menuButton?.focus({ preventScroll: true })
+    }
+  }, [menuOpen])
   const [openValue, setOpenValue] = useState(null)
+  const [valueDetail, setValueDetail] = useState(null)
+  const closeValueDetail = useCallback(() => setValueDetail(null), [])
+  const [compactValues, setCompactValues] = useState(() => window.matchMedia('(max-width: 900px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 900px)')
+    const update = () => {
+      setCompactValues(media.matches)
+      if (media.matches) setOpenValue(null)
+    }
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
   const valuesRef = useRef(null)
   const workflowRef = useRef(null)
   const pageRef = useRef(null)
+  const patientVisualRef = useRef(null)
+
+  useEffect(() => {
+    const rail = valuesRef.current
+    if (!rail) return
+    const track = rail.parentElement.querySelector('.n-values-scrollbar')
+    function updateScrollbar() {
+      const maxScroll = rail.scrollWidth - rail.clientWidth
+      track.hidden = maxScroll <= 1
+      const ratio = rail.clientWidth / rail.scrollWidth
+      const progress = maxScroll > 0 ? Math.min(1, Math.max(0, rail.scrollLeft / maxScroll)) : 0
+      track.style.setProperty('--thumb-width', `${ratio * 100}%`)
+      track.style.setProperty('--thumb-left', `${progress * (1 - ratio) * 100}%`)
+    }
+    const observer = new ResizeObserver(updateScrollbar)
+    observer.observe(rail)
+    for (const card of rail.children) observer.observe(card)
+    rail.addEventListener('scroll', updateScrollbar, { passive: true })
+    updateScrollbar()
+    return () => {
+      observer.disconnect()
+      rail.removeEventListener('scroll', updateScrollbar)
+    }
+  }, [])
+
+  useEffect(() => {
+    const visual = patientVisualRef.current
+    if (!visual) return
+    if (!('IntersectionObserver' in window)) {
+      visual.classList.add('is-visible')
+      return
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      visual.classList.add('is-visible')
+      observer.disconnect()
+    }, { threshold: 0.2, rootMargin: '0px 0px -48px 0px' })
+    observer.observe(visual)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const page = pageRef.current
+    if (!page) return
+    function trackButtonPointer(event) {
+      const button = event.target.closest?.('.n-button')
+      if (!button || !page.contains(button) || button.matches(':disabled, [aria-disabled="true"]')) return
+      const bounds = button.getBoundingClientRect()
+      if (!bounds.width || !bounds.height) return
+      const x = Math.max(0, Math.min(100, (event.clientX - bounds.left) / bounds.width * 100))
+      const y = Math.max(0, Math.min(100, (event.clientY - bounds.top) / bounds.height * 100))
+      button.style.setProperty('--button-pointer-x', `${x}%`)
+      button.style.setProperty('--button-pointer-y', `${y}%`)
+    }
+    page.addEventListener('pointerover', trackButtonPointer, { passive: true })
+    page.addEventListener('pointermove', trackButtonPointer, { passive: true })
+    page.addEventListener('pointerdown', trackButtonPointer, { passive: true })
+    return () => {
+      page.removeEventListener('pointerover', trackButtonPointer)
+      page.removeEventListener('pointermove', trackButtonPointer)
+      page.removeEventListener('pointerdown', trackButtonPointer)
+    }
+  }, [])
 
   useLayoutEffect(() => {
     const page = pageRef.current
@@ -96,13 +297,14 @@ export default function HomepageNew() {
 
     const targets = [...page.querySelectorAll([
       '.n-hero-content > *', '.n-page-intro > *', '.n-heading > *',
-      '.n-value', '.n-capability-photo', '.n-capability-list > li', '.n-more',
+      '.n-values-shell', '.n-capability-photo', '.n-capability-list > li', '.n-more',
       '.n-workflow-copy > h2', '.n-step', '.n-workflow-photo', '.n-controls',
       '.n-reason-grid > article', '.n-contact > *', '.n-footer-nav > nav',
       '.n-about-text > *', '.n-about-soap', '.n-about-doctor', '.n-about-timeline',
       '.n-about-record-copy > .n-button', '.n-demo-copy > h1', '.n-demo-benefits > h2',
       '.n-demo-benefits li', '.n-demo-form',
-      '.n-feature-copy > *', '.n-feature-visual',
+      '.n-feature-group > h3', '.n-feature-options > li', '.n-feature-detail',
+      '.n-care-principle', '.n-patient-app-image',
     ].join(', '))]
     const seen = new Set()
     const animations = new Map()
@@ -184,37 +386,37 @@ export default function HomepageNew() {
   useLayoutEffect(() => {
     const column = workflowRef.current
     if (!column) return
-    let previousWidth = 0
     function reserveExpandedHeight() {
-      const width = column.getBoundingClientRect().width
-      if (width === previousWidth) return
-      previousWidth = width
       const cards = [...column.querySelectorAll('.n-step')]
+      const horizontal = getComputedStyle(column.querySelector('.n-steps')).flexDirection === 'row'
       let closedHeight = 0
       let maxDetailsHeight = 0
       const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
       for (const card of cards) {
-        const list = card.querySelector('ul')
+        const list = card.querySelector('.n-step-body')
         const detailHeight = list.getBoundingClientRect().height
         const style = getComputedStyle(card)
-        closedHeight += card.querySelector('h3').getBoundingClientRect().height
+        const cardHeight = card.querySelector('h3').getBoundingClientRect().height
           + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth)
+        closedHeight = horizontal ? Math.max(closedHeight, cardHeight) : closedHeight + cardHeight
         maxDetailsHeight = Math.max(maxDetailsHeight, detailHeight)
         card.style.setProperty('--step-detail-height', `${detailHeight / rootSize}rem`)
       }
       const headingHeight = column.querySelector('h2').getBoundingClientRect().height
       const sectionGap = parseFloat(getComputedStyle(column).gap) || 0
       const cardsGap = parseFloat(getComputedStyle(column.querySelector('.n-steps')).gap) || 0
-      const height = headingHeight + sectionGap + closedHeight + cardsGap * (cards.length - 1) + maxDetailsHeight
+      const stepsHeight = closedHeight + (horizontal ? 0 : cardsGap * (cards.length - 1)) + maxDetailsHeight
+      column.style.setProperty('--workflow-steps-height', `${stepsHeight / rootSize}rem`)
+      const height = headingHeight + sectionGap + stepsHeight
       column.style.setProperty('--workflow-content-height', `${height / rootSize}rem`)
     }
     reserveExpandedHeight()
     const observer = new ResizeObserver(reserveExpandedHeight)
     observer.observe(column)
+    column.querySelectorAll('.n-step-body, .n-step h3, .n-workflow-copy > h2').forEach((element) => observer.observe(element))
     let cancelled = false
     document.fonts.ready.then(() => {
       if (!cancelled) {
-        previousWidth = 0
         reserveExpandedHeight()
       }
     })
@@ -236,11 +438,15 @@ export default function HomepageNew() {
       const width = container.clientWidth
       const gap = parseFloat(getComputedStyle(container).columnGap)
       const isColumn = getComputedStyle(container).flexDirection === 'column'
+      const compact = window.matchMedia('(max-width: 64rem)').matches
       const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
       const columnWidth = container.firstElementChild.getBoundingClientRect().width
-      container.style.setProperty('--value-closed-width', `${(isColumn ? columnWidth : (width - 2 * gap) / 3) / rootSize}rem`)
-      container.style.setProperty('--value-open-width', `${(isColumn ? columnWidth : (2 * width - gap) / 3) / rootSize}rem`)
-      const target = openValue === null || isColumn ? 0 : openValue * (width + gap) / 6
+      container.style.setProperty('--value-closed-width', `${(isColumn || compact ? columnWidth : (width - 2 * gap) / 3) / rootSize}rem`)
+      container.style.setProperty('--value-open-width', `${(isColumn || compact ? columnWidth : (2 * width - gap) / 3) / rootSize}rem`)
+      const selected = openValue === null ? null : container.children[openValue]
+      const target = openValue === null || isColumn ? 0 : compact
+        ? Math.max(0, Math.min(container.scrollWidth - width, selected.offsetLeft - (width - selected.offsetWidth) / 2))
+        : openValue * (width + gap) / 6
       const start = container.scrollLeft
       const startedAt = performance.now()
 
@@ -286,10 +492,34 @@ export default function HomepageNew() {
   }, [openValue])
   const [activeStep, setActiveStep] = useState(0)
   const [openStep, setOpenStep] = useState(null)
+  useEffect(() => {
+    const rail = workflowRef.current?.querySelector('.n-steps')
+    if (!rail || getComputedStyle(rail).flexDirection !== 'row') return
+    const card = rail.children[activeStep]
+    const offset = card.getBoundingClientRect().left - rail.getBoundingClientRect().left + rail.scrollLeft
+    rail.scrollTo({
+      left: Math.max(0, offset - (rail.clientWidth - card.offsetWidth) / 2),
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    })
+  }, [activeStep])
   function changeStep(direction) { const next = (activeStep + direction + steps.length) % steps.length; setActiveStep(next); setOpenStep(next) }
-  return <div className={`new-home ${isHome || isAbout ? '' : 'n-inner-page'} ${isDemo ? 'n-demo-page' : ''}`} id="top" ref={pageRef}>
-    <header className={`n-header ${scrolled ? 'is-scrolled' : ''} ${headerHidden && !menuOpen ? 'is-hidden' : ''}`}><a href="/" className="n-brand" aria-label="eChart — Trang chủ"><img src={asset('imgLogo.png')} width="129" height="30" alt="eChart" /></a><nav className={`n-nav ${menuOpen ? 'is-open' : ''}`} id="n-navigation" aria-label="Điều hướng chính">{nav.map(([id, title]) => <a href={id} key={id} aria-current={pathname === id ? 'page' : undefined} onClick={() => setMenuOpen(false)}>{title}</a>)}</nav><a href="/contact" className="n-button n-header-cta">Liên hệ Demo</a><button className="n-menu" aria-expanded={menuOpen} aria-controls="n-navigation" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? 'Đóng' : 'Menu'}</button></header>
-    <main>
+  return <div className={`new-home ${isHome || isAbout || isFeatures ? '' : 'n-inner-page'} ${isDemo ? 'n-demo-page' : ''}`} id="top" ref={pageRef}>
+    <header ref={headerRef} className={`n-header ${scrolled ? 'is-scrolled' : ''} ${headerHidden && !menuOpen ? 'is-hidden' : ''} ${menuOpen ? 'is-menu-open' : ''}`} role={menuOpen ? 'dialog' : undefined} aria-modal={menuOpen ? true : undefined} aria-label={menuOpen ? 'Menu điều hướng' : undefined}>
+      <a href="/" className="n-brand" aria-label="eChart — Trang chủ"><img src={asset('imgLogo.png')} width="129" height="30" alt="eChart" /></a>
+      <nav className={`n-nav ${menuOpen ? 'is-open' : ''}`} id="n-navigation" aria-label="Điều hướng chính">
+        {nav.map(([id, title]) => <a href={id} key={id} aria-current={pathname === id ? 'page' : undefined} onClick={() => setMenuOpen(false)}>{title}</a>)}
+        <a href="/contact" className="n-button n-mobile-demo" onClick={() => setMenuOpen(false)}>Liên hệ Demo</a>
+      </nav>
+      <a href="/contact" className="n-button n-header-cta">Liên hệ Demo</a>
+      <button ref={menuButtonRef} className="n-menu" type="button" aria-label={menuOpen && !menuClosing ? 'Đóng menu' : 'Mở menu'} aria-expanded={menuOpen && !menuClosing} aria-controls="n-navigation" onClick={() => {
+        if (menuClosing) setMenuClosing(false)
+        else if (menuOpen) setMenuClosing(true)
+        else setMenuOpen(true)
+      }}>
+        <span className="n-menu-icon" aria-hidden="true"><span /><span /><span /></span>
+      </button>
+    </header>
+    <main inert={menuOpen}>
       {isAbout && <AboutPage />}
       {isDemo && <DemoContact />}
       {isFeatures && <FeaturesPage />}
@@ -298,7 +528,21 @@ export default function HomepageNew() {
         <p>Trang bạn tìm kiếm hiện chưa có nội dung.</p>
       </section>}
       {(isHome) && <section className="n-hero" aria-labelledby="n-title"><div className="n-hero-panel"><img className="n-hero-image" src={asset('imgImage2.png')} alt="Bác sĩ tư vấn cho bệnh nhân tại phòng khám" fetchPriority="high" /><div className="n-hero-content"><h1 id="n-title">Nền tảng số cho<br />y học gia đình</h1><p>eChart đơn giản hóa hoạt động khám chữa bệnh, giúp phòng khám giảm công việc thủ công và dành nhiều thời gian hơn cho việc chăm sóc bệnh nhân</p><a href="/contact" className="n-button">Trao đổi với chuyên gia</a></div></div></section>}
-      {isHome && <section className="n-section n-container" id="about" aria-labelledby="n-values-title"><div className="n-heading"><h2 id="n-values-title">Giá trị eChart mang lại</h2><p>Được xây dựng từ nhu cầu vận hành thực tế của phòng khám, tập trung vào trải nghiệm thực tế của bác sĩ, tính linh hoạt theo từng chuyên khoa và khả năng kết nối với bệnh nhân.</p></div><div className="n-values" ref={valuesRef}>{values.map(([photo, title, detail], index) => <article className={`n-value n-value-${index + 1} ${openValue === index ? 'is-open' : ''}`} key={photo}><img className="n-value-image" src={asset(photo)} alt="" loading="lazy" /><div className="n-value-shade" /><button className="n-value-toggle" aria-expanded={openValue === index} aria-controls={`n-value-${index}`} aria-label={`${openValue === index ? 'Thu gọn' : 'Tìm hiểu thêm'}: ${title}`} onClick={() => setOpenValue(openValue === index ? null : index)}><span className="n-value-toggle-symbol" aria-hidden="true"><DesignIcon name="imgVector.svg" className="n-value-plus" /><DesignIcon name="value-minus.svg" className="n-value-minus" /></span></button><div className="n-value-copy n-value-copy-collapsed" aria-hidden={openValue === index}><h3>{title}</h3></div><div className="n-value-copy n-value-copy-expanded" id={`n-value-${index}`} aria-hidden={openValue !== index} inert={openValue !== index}><h3>{title}</h3><p>{detail}</p></div></article>)}</div></section>}
+      {isHome && <section className="n-section n-container" id="about" aria-labelledby="n-values-title"><div className="n-heading"><h2 id="n-values-title">Giá trị eChart mang lại</h2><p>Được xây dựng từ nhu cầu vận hành thực tế của phòng khám, tập trung vào trải nghiệm thực tế của bác sĩ, tính linh hoạt theo từng chuyên khoa và khả năng kết nối với bệnh nhân.</p></div><div className="n-values-shell"><div className="n-values" ref={valuesRef}>{values.map(([photo, title, detail], index) => <article className={`n-value n-value-${index + 1} ${openValue === index ? 'is-open' : ''}`} key={photo}><img className="n-value-image" src={asset(photo)} alt="" loading="lazy" /><div className="n-value-shade" /><button className="n-value-toggle" aria-expanded={compactValues ? valueDetail === index : openValue === index} aria-haspopup={compactValues ? 'dialog' : undefined} aria-controls={compactValues ? 'n-value-dialog' : `n-value-${index}`} aria-label={`${openValue === index ? 'Thu gọn' : 'Tìm hiểu thêm'}: ${title}`} onClick={() => compactValues ? setValueDetail(index) : setOpenValue(openValue === index ? null : index)}><span className="n-value-toggle-symbol" aria-hidden="true"><DesignIcon name="imgVector.svg" className="n-value-plus" /><DesignIcon name="value-minus.svg" className="n-value-minus" /></span></button><div className="n-value-copy n-value-copy-collapsed" aria-hidden={openValue === index}><h3>{title}</h3></div><div className="n-value-copy n-value-copy-expanded" id={`n-value-${index}`} aria-hidden={openValue !== index} inert={openValue !== index}><h3>{title}</h3><p>{detail}</p></div></article>)}</div><div className="n-values-scrollbar" aria-hidden="true"><span /></div></div></section>}
+      {isHome && <section className="n-section n-container n-care-direction" aria-labelledby="n-care-direction-title">
+        <div className="n-heading">
+          <h2 id="n-care-direction-title">Định hướng của eChart</h2>
+          <p>Hướng đến việc giúp người bệnh tiếp cận dịch vụ y tế, được chăm sóc toàn diện, và liên tục trong suốt hành trình sức khỏe, eChart được xây dưng dựa trên bốn chức năng cốt lõi</p>
+        </div>
+        <div className="n-care-principles">
+          {carePrinciples.map(([number, title, english, description]) => <article className="n-care-principle" key={number}>
+            <span className="n-care-number" aria-hidden="true">{number}</span>
+            <h3>{title}</h3>
+            <p className="n-care-english" lang="en">{english}</p>
+            <p className="n-care-description">{description}</p>
+          </article>)}
+        </div>
+      </section>}
       {isHome && <section className="n-section n-container n-capabilities" id="features" aria-labelledby="n-features-title">
         <div className="n-heading">
           <h2 id="n-features-title">Khám phá những gì eChart có thể làm</h2>
@@ -322,9 +566,28 @@ export default function HomepageNew() {
           <DesignIcon name="arrow-up-right.svg" />
         </a>
       </section>}
-      {isHome && <section className="n-section n-container n-workflow" aria-labelledby="n-workflow-title"><div className="n-workflow-copy" ref={workflowRef}><h2 id="n-workflow-title">Một buổi khám diễn ra<br />trên eChart thế nào?</h2><div className="n-steps">{steps.map(([icon, title, detail], index) => <div className={`n-step ${openStep === index ? 'is-open' : ''}`} key={title}><h3><button aria-expanded={openStep === index} aria-controls={`n-step-${index}`} onClick={() => {setActiveStep(index);setOpenStep(openStep === index ? null : index)}}><DesignIcon name={icon} className="n-step-icon" /><span>{title}</span><DesignIcon name="imgVector2.svg" className={`n-step-plus ${openStep === index ? 'is-open' : ''}`} /></button></h3><div className="n-step-detail" id={`n-step-${index}`} aria-hidden={openStep !== index} inert={openStep !== index}><ul>{detail.map((line) => <li key={line}>{line}</li>)}</ul></div></div>)}</div></div><div className="n-workflow-visual"><div className="n-workflow-photo">{workflowImages.map((image, index) => <img key={image} className={activeStep === index ? 'is-active' : ''} src={image} alt={activeStep === index ? steps[index][1] : ''} aria-hidden={activeStep !== index} loading="lazy" />)}</div><div className="n-controls"><span className="n-icon n-progress" style={{ '--progress': `${(activeStep + 1) * 25}%` }} aria-hidden="true"><span /></span><span aria-live="polite">{activeStep + 1}/4</span><div className="n-arrows"><button aria-label="Bước trước" onClick={() => changeStep(-1)}><DesignIcon name="imgArrowLeft.svg" /></button><button aria-label="Bước tiếp theo" onClick={() => changeStep(1)}><DesignIcon name="imgArrowLeft1.svg" /></button></div></div></div></section>}
+      {isHome && <section className="n-section n-container n-workflow" aria-labelledby="n-workflow-title"><div className="n-workflow-copy" ref={workflowRef}><h2 id="n-workflow-title">Một buổi khám diễn ra<br />trên eChart thế nào?</h2><div className="n-steps">{steps.map(([icon, title, detail], index) => <div className={`n-step ${openStep === index ? 'is-open' : ''}`} key={title}><h3><button aria-expanded={openStep === index} aria-controls={`n-step-${index}`} onClick={() => {setActiveStep(index);setOpenStep(openStep === index ? null : index)}}><DesignIcon name={icon} className="n-step-icon" /><span>{title}</span><DesignIcon name="imgVector2.svg" className={`n-step-plus ${openStep === index ? 'is-open' : ''}`} /></button></h3><div className="n-step-detail" id={`n-step-${index}`} aria-hidden={openStep !== index} inert={openStep !== index}><div className="n-step-body"><ul>{detail.map((line) => <li key={line}>{line}</li>)}</ul><img className="n-step-image" src={workflowImages[index]} alt={title} loading="lazy" /></div></div></div>)}</div></div><div className="n-workflow-visual"><div className="n-workflow-photo">{workflowImages.map((image, index) => <img key={image} className={activeStep === index ? 'is-active' : ''} src={image} alt={activeStep === index ? steps[index][1] : ''} aria-hidden={activeStep !== index} loading="lazy" />)}</div><div className="n-controls"><span className="n-icon n-progress" style={{ '--progress': `${(activeStep + 1) * 25}%` }} aria-hidden="true"><span /></span><span aria-live="polite">{activeStep + 1}/4</span><div className="n-arrows"><button aria-label="Bước trước" onClick={() => changeStep(-1)}><DesignIcon name="imgArrowLeft.svg" /></button><button aria-label="Bước tiếp theo" onClick={() => changeStep(1)}><DesignIcon name="imgArrowLeft1.svg" /></button></div></div></div></section>}
+      {isHome && <section className="n-patient-app" aria-labelledby="n-patient-app-title">
+        <div className="n-container">
+          <div className="n-heading n-heading-center">
+            <h2 id="n-patient-app-title">Kết nối và chăm sóc bệnh nhân liên tục</h2>
+            <p>Bên cạnh hệ thống bệnh án điện tử eChart, chúng tôi đang phát triển ứng dụng dành cho bệnh nhân giúp họ theo dõi thông tin sức khỏe, xem lịch sử khám chữa bệnh và theo dõi điều trị qua dữ liệu phòng khám chia sẻ.</p>
+          </div>
+          <div className="n-patient-app-visual" ref={patientVisualRef}>
+            <img className="n-patient-app-image" src={patientAppImage} width="1670" height="942" alt="Hai bệnh nhân cùng xem thông tin sức khỏe trên điện thoại" loading="lazy" />
+            <ul className="n-patient-notifications" aria-label="Thông báo minh họa trên eChart App">
+              {patientNotifications.map(([id, icon, title, detail], index) => <li className={`n-patient-notification n-patient-notification-${id}`} key={id} style={{ '--notification-order': index }}>
+                <span className="n-patient-notification-icon"><DesignIcon name={icon} /></span>
+                <div><h3>{title}</h3><p>{detail}</p></div>
+                <span className="n-patient-notification-chevron" aria-hidden="true">›</span>
+              </li>)}
+            </ul>
+          </div>
+        </div>
+      </section>}
       {isHome && <ReasonsSection />}
     </main>
-    <footer className={`n-footer ${isDemo ? 'n-footer-compact' : ''}`} id="contact">{!isDemo && <><div className="n-footer-bg" aria-hidden="true" /><div className="n-container n-contact"><h2>Khám phá eChart có thể mang lại<br />giá trị gì cho phòng khám của bạn</h2><a className="n-button n-button-light" href="/contact">Đặt lịch Demo</a></div><div className="n-divider" aria-hidden="true" /></>}<div className="n-container n-footer-nav"><nav aria-label="Điều hướng chân trang"><a href="/about">Về chúng tôi</a><a href="/features">Tính năng &amp; Giải pháp</a><a href="/contact">Liên hệ</a></nav><nav aria-label="Chính sách"><a href="#privacy">Chính sách bảo mật</a><a href="#terms">Điều khoản sử dụng</a></nav></div></footer>
+    {isHome && <ValueDetailOverlay items={values.map(([photo, title, detail]) => [asset(photo), title, detail])} index={valueDetail} onChange={setValueDetail} onClose={closeValueDetail} />}
+    <footer inert={menuOpen} className={`n-footer ${isDemo ? 'n-footer-compact' : ''}`} id="contact">{!isDemo && <><div className="n-footer-bg" aria-hidden="true" /><div className="n-container n-contact"><h2>Khám phá eChart có thể mang lại<br />giá trị gì cho phòng khám của bạn</h2><a className="n-button n-button-light" href="/contact">Đặt lịch Demo</a></div><div className="n-divider" aria-hidden="true" /></>}<div className="n-container n-footer-nav"><nav aria-label="Điều hướng chân trang"><a href="/about">Về chúng tôi</a><a href="/features">Tính năng &amp; Giải pháp</a><a href="/contact">Liên hệ</a></nav><nav aria-label="Chính sách"><a href="#privacy">Chính sách bảo mật</a><a href="#terms">Điều khoản sử dụng</a></nav></div></footer>
   </div>
 }

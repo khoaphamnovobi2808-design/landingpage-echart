@@ -64,6 +64,7 @@
 }
 
 html {
+    scrollbar-gutter: stable;
     min-width: 20rem;
     scroll-behavior: smooth;
     scroll-padding-top: 5.25rem;

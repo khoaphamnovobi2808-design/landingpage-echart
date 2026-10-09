@@ -1,0 +1,173 @@
+.n-value-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+  color: #fff;
+  background: #102b2b;
+  font-family: 'Manrope', sans-serif;
+}
+
+.n-value-dialog[open] {
+  animation: n-value-dialog-enter 450ms ease-out both;
+}
+
+.n-value-dialog::backdrop {
+  background: transparent;
+}
+
+.n-value-dialog-scenes,
+.n-value-dialog-scene,
+.n-value-dialog-scene > img,
+.n-value-dialog-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.n-value-dialog-scene {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 650ms ease, visibility 650ms;
+}
+
+.n-value-dialog-scene.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.n-value-dialog-scene > img {
+  height: min(100%, 110vw);
+  object-fit: cover;
+  object-position: left top;
+  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+}
+
+.n-value-dialog-shade {
+  background: linear-gradient(180deg, rgb(0 20 20 / 40%) 0%, transparent 28%, rgb(0 20 20 / 25%) 42%, rgb(0 20 20 / 92%) 100%);
+}
+
+.n-value-dialog-copy {
+  position: absolute;
+  inset: auto 1.75rem calc(6.5rem + env(safe-area-inset-bottom));
+  max-height: calc(100% - 13rem - env(safe-area-inset-bottom) - env(safe-area-inset-top));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.new-home .n-value-dialog-copy h2 {
+  color: inherit;
+  font-family: inherit;
+  max-width: 36rem;
+  margin: 0 0 1rem;
+  font-size: clamp(1.5rem, 3.6vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.n-value-dialog-copy p {
+  max-width: 36rem;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.n-value-dialog-top {
+  position: absolute;
+  inset: calc(1.5rem + env(safe-area-inset-top)) 1.5rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 1rem;
+}
+
+.n-value-dialog-controls {
+  position: absolute;
+  right: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.n-value-dialog-controls > span {
+  margin-right: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.n-value-dialog button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 0.0625rem solid rgb(255 255 255 / 60%);
+  border-radius: 50%;
+  color: #fff;
+  background: rgb(0 20 20 / 24%);
+  backdrop-filter: blur(0.5rem);
+  cursor: pointer;
+  transition: background 250ms ease, transform 250ms ease;
+}
+
+.n-value-dialog button:hover {
+  background: rgb(255 255 255 / 20%);
+}
+
+.n-value-dialog button:active {
+  transform: scale(0.94);
+}
+
+.n-value-dialog button:focus-visible {
+  outline: 0.125rem solid white;
+  outline-offset: 0.25rem;
+}
+
+.n-value-dialog button svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes n-value-dialog-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 43.75rem) {
+  .n-value-dialog-scene > img {
+    top: calc(4.5rem + env(safe-area-inset-top));
+    height: min(calc(100% - 4.5rem - env(safe-area-inset-top)), 110vw);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 6%, #000 70%, transparent 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .n-value-dialog[open] {
+    animation: none;
+  }
+
+  .n-value-dialog-scene,
+  .n-value-dialog button {
+    transition: none;
+  }
+}
