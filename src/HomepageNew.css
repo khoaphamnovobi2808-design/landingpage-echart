@@ -149,7 +149,7 @@
 
 .n-header.is-scrolled {
     border-color: rgb(255 255 255 / 60%);
-    background: linear-gradient(to bottom, rgb(255 255 255 / 92%), rgb(0 0 0 / 8%));
+    background: linear-gradient(to bottom, rgb(255 255 255 / 92%), rgb(232 245 255 / 8%));
     -webkit-backdrop-filter: blur(1rem);
     backdrop-filter: blur(1rem);
     box-shadow: 0 0.375rem 1.5rem rgb(4 44 77 / 10%);
@@ -1364,7 +1364,7 @@
     .n-nav .n-mobile-demo {
         display: inline-flex;
         margin-top: 0.5rem;
-        font-size: 1.5rem !important;
+        font-size: 1.25rem !important;
     }
 
     .n-reason-grid {
